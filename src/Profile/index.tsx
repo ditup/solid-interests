@@ -25,6 +25,7 @@ export type Interest = {
   label: string
   uri: IriString
   description: string
+  pending?: boolean
 }
 
 export type User = {
@@ -51,7 +52,10 @@ const ProfileContainer: React.FC<Props> = ({ webId }) => {
     if (!Object.keys(user.interests).includes(interest.uri)) {
       setUser(user => ({
         ...user,
-        interests: { ...user.interests, ...{ [interest.uri]: interest } },
+        interests: {
+          ...user.interests,
+          ...{ [interest.uri]: { ...interest, pending: true } },
+        },
       }))
       const dataset = await getSolidDataset(userId, { fetch: auth.fetch })
       const user = getThing(dataset, userId)
@@ -60,10 +64,24 @@ const ProfileContainer: React.FC<Props> = ({ webId }) => {
         const changedDataset = setThing(dataset, updatedUser)
         await saveSolidDatasetAt(userId, changedDataset, { fetch: auth.fetch })
       }
+      setUser(user => ({
+        ...user,
+        interests: {
+          ...user.interests,
+          ...{ [interest.uri]: { ...interest } },
+        },
+      }))
     } else alert(`${interest.label} already added`)
   }
 
   const handleRemoveInterest = async (interest: Interest) => {
+    setUser(user => ({
+      ...user,
+      interests: {
+        ...user.interests,
+        ...{ [interest.uri]: { ...interest, pending: true } },
+      },
+    }))
     const dataset = await getSolidDataset(userId, { fetch: auth.fetch })
     const user = getThing(dataset, userId)
     if (user) {
@@ -82,6 +100,12 @@ const ProfileContainer: React.FC<Props> = ({ webId }) => {
 
   // fetch the new user when userId changes
   useEffect(() => {
+    setUser({
+      webId: '',
+      name: '',
+      photo: '',
+      interests: {},
+    })
     ;(async () => {
       const dataset = await getSolidDataset(userId, { fetch: auth.fetch })
       const user = getThing(dataset, userId)
@@ -92,13 +116,25 @@ const ProfileContainer: React.FC<Props> = ({ webId }) => {
           getTerm(user, vcard.hasPhoto)?.value ??
           ''
         const interestUris = getUrlAll(user, foaf.topic_interest)
-        const interests = await Promise.all(
-          interestUris.map(uri => getInterest(uri)),
+        const preInterests = Object.fromEntries(
+          interestUris.map(uri => [
+            uri,
+            { uri, label: '...', description: '', pending: true },
+          ]),
         )
-        const interestDict = Object.fromEntries(
-          interests.map(interest => [interest.uri, interest]),
-        )
-        setUser({ name, photo, webId: userId, interests: interestDict })
+        setUser({ name, photo, webId: userId, interests: preInterests })
+
+        for (const uri of interestUris) {
+          getInterest(uri).then(interest =>
+            setUser(user => ({
+              ...user,
+              interests: {
+                ...user.interests,
+                ...{ [interest.uri]: { ...interest } },
+              },
+            })),
+          )
+        }
       }
     })()
   }, [userId, webId])
@@ -106,11 +142,16 @@ const ProfileContainer: React.FC<Props> = ({ webId }) => {
   return (
     <>
       <WebIdForm webId={webId} onChangeUser={handleChangeUser} />
-      <Profile
-        onAddInterest={handleAddInterest}
-        onRemoveInterest={handleRemoveInterest}
-        user={user}
-      />
+      {user.webId ? (
+        <Profile
+          onAddInterest={handleAddInterest}
+          onRemoveInterest={handleRemoveInterest}
+          user={user}
+          loggedUserId={webId}
+        />
+      ) : (
+        'loading profile...'
+      )}
     </>
   )
 }

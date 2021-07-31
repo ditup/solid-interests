@@ -3,9 +3,11 @@ import { Interest, User } from '.'
 import styled from 'styled-components'
 import InterestSearch from '../InterestSearch'
 import InterestTag from './InterestTag'
+import { IriString } from '@inrupt/solid-client'
 
 interface Props {
   user: User
+  loggedUserId: IriString
   onAddInterest: (interest: Interest) => void
   onRemoveInterest: (interest: Interest) => void
 }
@@ -20,6 +22,7 @@ const Photo = styled.img`
 
 const Profile: React.FC<Props> = ({
   user,
+  loggedUserId,
   onAddInterest,
   onRemoveInterest,
 }) => {
@@ -58,7 +61,9 @@ const Profile: React.FC<Props> = ({
           ) : (
             'no interests'
           )}
-          <InterestSearch onSelectInterest={onAddInterest} />
+          {loggedUserId === user.webId && (
+            <InterestSearch onSelectInterest={onAddInterest} />
+          )}
         </div>
       </div>
     </div>

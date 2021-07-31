@@ -8,10 +8,18 @@ interface Props {
 
 const InterestTag: React.FC<Props> = ({ interest, onClose }) => (
   <div className="tags has-addons">
-    <a title={interest.description} className="tag is-link" href={interest.uri}>
+    <a
+      title={interest.description}
+      className={`tag is-link${interest.pending ? ' is-light' : ''}`}
+      href={interest.uri}
+    >
       {interest.label}
     </a>
-    <button onClick={() => onClose()} className="tag is-delete"></button>
+    <button
+      disabled={!!interest.pending}
+      onClick={() => onClose()}
+      className="tag is-delete"
+    ></button>
   </div>
 )
 
