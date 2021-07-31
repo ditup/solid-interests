@@ -1,9 +1,15 @@
-import React from 'react'
+import React, { useContext } from 'react'
 import Login from './Login'
+import Profile from './Profile'
+import SessionContext from './SessionContext'
 
 function App() {
+  const [info] = useContext(SessionContext)
   return (
-    <div>nothing</div>
+    <>
+      <Login />
+      {info.status === 'in' && <Profile webId={info.webId} />}
+    </>
   )
 }
 
