@@ -32,3 +32,40 @@ export const getInterest = async (uri: IriString): Promise<Interest> => {
     description: '',
   }
 }
+
+let abortController = new AbortController()
+
+export const searchInterests = async (
+  query: string,
+): Promise<Interest[] | void> => {
+  abortController.abort() // Cancel the previous request
+  abortController = new AbortController()
+
+  if (query.length === 0) {
+    return []
+  }
+
+  try {
+    let response = await fetch(
+      `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${encodeURIComponent(
+        query,
+      )}&format=json&errorformat=plaintext&language=en&uselang=en&type=item&origin=*`,
+      { signal: abortController.signal },
+    )
+    const data = (await response.json()) as {
+      search: { concepturi: string; description: string; label: string }[]
+    }
+
+    return data.search.map(a => ({
+      uri: a.concepturi,
+      description: a.description,
+      label: a.label,
+    }))
+  } catch (ex) {
+    if (ex.name === 'AbortError') {
+      return // Continuation logic has already been skipped, so return normally
+    }
+
+    throw ex
+  }
+}
