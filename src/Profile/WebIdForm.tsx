@@ -17,11 +17,16 @@ const WebIdForm: React.FC<Props> = ({ webId, onChangeUser }) => {
     <>
       <form onSubmit={handleChangeUserId}>
         <input
+          className="input"
           type="text"
           value={userId}
           onChange={e => setUserId(e.target.value)}
         />
-        <button type="button" onClick={() => setUserId(webId)}>
+        <button
+          className="button"
+          type="button"
+          onClick={() => setUserId(webId)}
+        >
           my webId
         </button>
       </form>

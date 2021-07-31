@@ -33,7 +33,6 @@ const Login = () => {
       })
       const { info } = getDefaultSession()
       setSession({ status: 'in', webId: info?.webId ?? '' })
-      console.log(info)
     } catch (error) {
       alert(error.message)
       setSession({ status: 'out', webId: '' })
@@ -59,8 +58,16 @@ const Login = () => {
 
   if (session.status === 'pending') return <>Loading</>
   if (session.status === 'in')
-    return <button onClick={handleLogout}>Log out</button>
-  return <button onClick={handleLogin}>Log in</button>
+    return (
+      <button className="button" onClick={handleLogout}>
+        Log out
+      </button>
+    )
+  return (
+    <button className="button" onClick={handleLogin}>
+      Log in
+    </button>
+  )
 }
 
 export default Login
