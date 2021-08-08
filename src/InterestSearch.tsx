@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import debounce from 'debounce-promise'
-import { searchInterests } from './data'
+import { searchInterestsWikidata, searchInterestsDBPedia } from './data'
 import { Interest } from './Profile'
 
-const debouncedSearch = debounce(searchInterests, 30)
+const debouncedSearchWikidata = debounce(searchInterestsWikidata, 30)
+const debouncedSearchDBPedia = debounce(searchInterestsDBPedia, 30)
 
 interface Props {
   onSelectInterest: (interest: Interest) => void
@@ -12,19 +13,26 @@ interface Props {
 const InterestSearch: React.FC<Props> = ({ onSelectInterest }) => {
   const [query, setQuery] = useState('')
   const [found, setFound] = useState<Interest[]>([])
+  const [source, setSource] = useState<'dbp' | 'wd'>('wd')
 
   useEffect(() => {
     ;(async () => {
-      const output = await debouncedSearch(query)
+      const output = await (source === 'wd'
+        ? debouncedSearchWikidata
+        : debouncedSearchDBPedia)(query)
       if (output) {
         setFound(output)
       }
     })()
-  }, [query])
+  }, [query, source])
 
   const handleClickInterest = (interest: Interest) => {
     setQuery('')
     onSelectInterest(interest)
+  }
+
+  const handleSwitchSource = () => {
+    setSource(current => (current === 'wd' ? 'dbp' : 'wd'))
   }
 
   return (
@@ -36,6 +44,9 @@ const InterestSearch: React.FC<Props> = ({ onSelectInterest }) => {
         value={query}
         onChange={e => setQuery(e.target.value)}
       />
+      <button className="button" onClick={handleSwitchSource}>
+        {source === 'wd' ? 'wikidata' : 'dbpedia'}
+      </button>
       <ul>
         {found.map(interest => (
           <li key={interest.uri} onClick={() => handleClickInterest(interest)}>
