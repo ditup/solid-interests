@@ -5,6 +5,8 @@ import * as N3 from 'n3'
 const wikidataRegex =
   /^https?:\/\/(w{3}\.)?wikidata\.org\/entity\/([A-Z0-9]*)\/?$/
 
+const dbpediaRegex = /^https?:\/\/(w{3}\.)?dbpedia\.org\/resource\/(.+?)\/?$/
+
 const fetchTurtle: typeof window.fetch = (...params) => {
   const [uri, options, ...rest] = params
 
@@ -14,9 +16,12 @@ const fetchTurtle: typeof window.fetch = (...params) => {
 }
 
 export const getInterest = async (uri: string): Promise<Interest> => {
-  const id = uri.match(wikidataRegex)?.[2] ?? ''
-  const dataUri = id
-    ? `https://www.wikidata.org/wiki/Special:EntityData/${id}.ttl`
+  const wikidataId = uri.match(wikidataRegex)?.[2] ?? ''
+  const dbpediaId = uri.match(dbpediaRegex)?.[2] ?? ''
+  const dataUri = wikidataId
+    ? `https://www.wikidata.org/wiki/Special:EntityData/${wikidataId}.ttl`
+    : dbpediaId
+    ? `https://dbpedia.org/data/${dbpediaId}.ttl`
     : uri
   const rawData = await (await fetchTurtle(dataUri)).text()
   return await parseInterest(rawData, uri)
