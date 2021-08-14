@@ -1,47 +1,25 @@
-import {
-  getSolidDataset,
-  getStringWithLocale,
-  getThing,
-  IriString,
-} from '@inrupt/solid-client'
 import { rdfs, schema } from 'rdf-namespaces'
 import { Interest } from './Profile'
+import * as N3 from 'n3'
 
 const wikidataRegex =
   /^https?:\/\/(w{3}\.)?wikidata\.org\/entity\/([A-Z0-9]*)\/?$/
 
 const fetchTurtle: typeof window.fetch = (...params) => {
   const [uri, options, ...rest] = params
-  const headers = { accept: 'text/turtle', ...(options?.headers ?? {}) }
-  const o = { ...options, headers }
 
-  return window.fetch(uri, o, ...rest)
+  const headers = { accept: 'text/turtle', ...(options?.headers ?? {}) }
+
+  return window.fetch(uri, { ...options, headers }, ...rest)
 }
 
-export const getInterest = async (uri: IriString): Promise<Interest> => {
+export const getInterest = async (uri: string): Promise<Interest> => {
   const id = uri.match(wikidataRegex)?.[2] ?? ''
   const dataUri = id
     ? `https://www.wikidata.org/wiki/Special:EntityData/${id}.ttl`
     : uri
-  const dataset = await getSolidDataset(dataUri, { fetch: fetchTurtle })
-  const data = getThing(dataset, uri)
-  if (data) {
-    const label = getStringWithLocale(data, rdfs.label, 'en') ?? ''
-    const description =
-      getStringWithLocale(data, schema.description, 'en') ??
-      getStringWithLocale(data, rdfs.comment, 'en') ??
-      ''
-    return {
-      uri,
-      label,
-      description,
-    }
-  }
-  return {
-    uri,
-    label: '',
-    description: '',
-  }
+  const rawData = await (await fetchTurtle(dataUri)).text()
+  return await parseInterest(rawData, uri)
 }
 
 let abortController = new AbortController()
@@ -60,7 +38,7 @@ const searchInterestsFactory =
     }
 
     try {
-      let response = await fetch(queryGenerator(query), {
+      let response = await window.fetch(queryGenerator(query), {
         signal: abortController.signal,
       })
       const data = (await response.json()) as Body
@@ -108,3 +86,36 @@ export const searchInterestsDBPedia = searchInterestsFactory<DBPediaResponse>(
       label,
     })),
 )
+
+const parser = new N3.Parser()
+const parseInterest = async (ttl: string, uri: string): Promise<Interest> => {
+  const interest: Interest = { uri, description: '', label: '' }
+  return new Promise((resolve, reject) => {
+    parser.parse(ttl, (error, quad, prefixes) => {
+      if (error) {
+        return reject(error)
+      } else if (quad) {
+        if (quad.subject.id === uri) {
+          if (
+            quad.predicate.id === rdfs.label &&
+            quad.object.termType === 'Literal' &&
+            quad.object.language === 'en'
+          ) {
+            interest.label = quad.object.value
+          }
+
+          if (
+            (quad.predicate.id === schema.description ||
+              quad.predicate.id === rdfs.comment) &&
+            quad.object.termType === 'Literal' &&
+            quad.object.language === 'en'
+          ) {
+            interest.description = quad.object.value
+          }
+        }
+      } else {
+        return resolve(interest)
+      }
+    })
+  })
+}
