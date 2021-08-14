@@ -6,6 +6,7 @@ import {
   getDefaultSession,
 } from '@inrupt/solid-client-authn-browser'
 import SessionContext, { SessionInfo } from './SessionContext'
+import LoginPrompt from './LoginPrompt'
 
 const Login = () => {
   const [session, setSession] = useContext(SessionContext)
@@ -24,11 +25,11 @@ const Login = () => {
     })()
   }, [setSession])
 
-  const handleLogin = async () => {
+  const handleLogin = async (idp: string) => {
     setSession({ status: 'pending', webId: '' })
     try {
       await login({
-        oidcIssuer: 'https://solidcommunity.net',
+        oidcIssuer: idp,
         clientName: 'Solid Interests',
       })
       const { info } = getDefaultSession()
@@ -63,11 +64,7 @@ const Login = () => {
         Log out
       </button>
     )
-  return (
-    <button className="button" onClick={handleLogin}>
-      Log in
-    </button>
-  )
+  return <LoginPrompt onLogin={handleLogin} />
 }
 
 export default Login
